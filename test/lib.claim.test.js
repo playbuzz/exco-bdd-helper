@@ -1,5 +1,6 @@
 const Should = require('should');
 const SUT = require('../lib/claim');
+const ioc = require('../lib/ioc');
 
 describe('lib/claim', () => {
     describe('exported factory', () => {
@@ -82,7 +83,7 @@ describe('lib/claim', () => {
                     }, 'SUT')
                         .behavior({
                             options: { options: true },
-                            ioc: { ioc: true },
+                            ioc: ioc({ mocks: { ioc: true } }),
                             expect: {
                                 type: 'object',
                                 result: {
@@ -186,7 +187,7 @@ describe('lib/claim', () => {
 
                         try {
                             SUT(
-                                () => { ooo.push('sut') },
+                                () => { ooo.push('sut'); },
                             ).behavior({
                                 options: { options: true },
                                 ioc: { ioc: true },
