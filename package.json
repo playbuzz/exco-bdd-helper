@@ -1,6 +1,6 @@
 {
   "name": "@playbuzz/exco-bdd-helper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A test helper for runners with bdd ui (describe, before, after, it)",
   "main": "lib",
   "files": [
