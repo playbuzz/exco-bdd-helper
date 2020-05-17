@@ -173,58 +173,62 @@ describe('lib/claim', () => {
                         Should(ctx.err).equal(mockErr);
                     });
                 });
+            });
 
-                describe('and case descriptor includes before/after hooks', () => {
-                    const ctx = {};
-                    const ooo = []; //ooo = order of operations
-                    before(() => {
-                        const { it, before, after } = global;
-                        const handlers = [];
+            describe('when used case descriptor does not include .expect section', () => {
+                SUT(a => a).behavior({}); //i.e should not fail
+            });
 
-                        global.before = f => f();
-                        global.it = (ttl, f) => handlers.push(f);
-                        global.after = f => handlers.push(f);
+            describe('when case descriptor includes before/after hooks', () => {
+                const ctx = {};
+                const ooo = []; //ooo = order of operations
+                before(() => {
+                    const { it, before, after } = global;
+                    const handlers = [];
 
-                        try {
-                            SUT(
-                                () => { ooo.push('sut'); },
-                            ).behavior({
-                                options: { options: true },
-                                ioc: { ioc: true },
-                                before: () => ooo.push('before'),
-                                expect: {
-                                    result: {
-                                        foo: () => ooo.push('result'),
-                                    },
+                    global.before = f => f();
+                    global.it = (ttl, f) => handlers.push(f);
+                    global.after = f => handlers.push(f);
+
+                    try {
+                        SUT(
+                            () => { ooo.push('sut'); },
+                        ).behavior({
+                            options: { options: true },
+                            ioc: { ioc: true },
+                            before: () => ooo.push('before'),
+                            expect: {
+                                result: {
+                                    foo: () => ooo.push('result'),
                                 },
-                                after: () => ooo.push('after'),
-                            });
-                        } finally {
-                            global.before = before;
-                            global.it = it;
-                            global.after = after;
-                        }
+                            },
+                            after: () => ooo.push('after'),
+                        });
+                    } finally {
+                        global.before = before;
+                        global.it = it;
+                        global.after = after;
+                    }
 
-                        try {
-                            //before called by the SUT.behavior
-                            handlers.forEach(f => f());
-                        } catch (err) {
-                            ctx.err = err;
-                        }
-                    });
+                    try {
+                        //before called by the SUT.behavior
+                        handlers.forEach(f => f());
+                    } catch (err) {
+                        ctx.err = err;
+                    }
+                });
 
-                    it('should not fail', () => {
-                        if (ctx.err) throw ctx.err;
-                    });
+                it('should not fail', () => {
+                    if (ctx.err) throw ctx.err;
+                });
 
-                    it('should fire before and after hooks', () => {
-                        Should(ooo).eql([
-                            'before',
-                            'sut',
-                            'result',
-                            'after',
-                        ]);
-                    });
+                it('should fire before and after hooks', () => {
+                    Should(ooo).eql([
+                        'before',
+                        'sut',
+                        'result',
+                        'after',
+                    ]);
                 });
             });
         });

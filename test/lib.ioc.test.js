@@ -103,36 +103,5 @@ describe('lib/ioc', () => {
                 },
             });
         });
-        describe('with config inside mocks', () => {
-            claim(SUT).behavior({
-                args: [{
-                    mock: {
-                        foo,
-                        bar,
-                        str,
-                        num,
-                        config: {
-                            fooCfg: { foo: 1 },
-                        },
-                    },
-                }],
-                expect: {
-                    result: {
-                        '.config object': {
-                            'should contain mock cwd and mock package info with defaults': result => {
-                                Should(result.config).containEql({
-                                    pkg: { name: 'mock-pkg', version: '1.2.3' },
-                                    cwd: '.',
-                                });
-                            },
-                            'should contain provided config into merged into it': result => {
-                                Should(result).have.property('config')
-                                    .containEql({ fooCfg: { foo: 1 } });
-                            },
-                        },
-                    },
-                },
-            });
-        });
     });
 });
