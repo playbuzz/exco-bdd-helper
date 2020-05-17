@@ -16,12 +16,12 @@ describe('lib/logger', () => {
         describe('returned instance', () => {
             describe('form', () => {
                 describe('logger api', () => {
-                    claim.hasApi(ctx, ['trace', 'debug', 'info', 'warn', 'error', 'fatal']);
+                    claim.hasApi(ctx, ['trace', 'debug', 'info', 'warn', 'error', 'fatal'], { prop: 'SUT' });
                 });
 
                 describe('test helper api', () => {
-                    claim.hasApi(ctx, ['reset']);
-                    claim.hasProps(ctx, { entries: Array });
+                    claim(ctx, 'SUT').hasApi(['reset']);
+                    claim(ctx, 'SUT').hasProps({ entries: Array });
                 });
             });
 

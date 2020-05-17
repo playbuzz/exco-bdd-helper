@@ -3,26 +3,25 @@ const SUT = require('../lib/claim');
 
 describe('lib/claim', () => {
     describe('exported factory', () => {
-        it('should be a factory that expect a target value', () => {
+        it('should be a factory that expect a target context', () => {
             SUT(SUT).isFunction(1);
         });
         describe('form', () => {
-            SUT.hasApi({ SUT }, {
+            SUT(SUT).hasApi({
                 isFunction: 2,
                 hasApi: 2,
                 hasProps: 2,
                 behaviors: 3,
                 behavior: 2,
             });
-            SUT.hasProps({ SUT }, ['version']);
-            SUT.hasProps({ SUT }, { version: 'string' });
-            SUT.hasProps({ SUT }, { version: String });
+            SUT.hasProps(SUT, ['version']);
+            SUT.hasProps(SUT, { version: 'string' });
+            SUT.hasProps(SUT, { version: String });
         });
-        describe('when called with a value', () => {
+        describe('when called with a context', () => {
             describe('retrned instance', () => {
                 describe('form', () => {
-                    const someFunction = SUT;
-                    SUT({ SUT: someFunction }).behavior({
+                    SUT(SUT).behavior({
                         args: [{}],
                         expect: {
                             api: [
@@ -48,14 +47,14 @@ describe('lib/claim', () => {
     });
 
     describe('static api', () => {
-        describe('.isFunction(v, arity)', () => {
-            describe('when called with a value that is not a function', () => SUT(SUT, 'isFunction').behavior({
+        describe('.isFunction(ctx, arity, { prop } = {})', () => {
+            describe('when called with a value that is not a function', () => SUT(SUT.isFunction).behavior({
                 args: ['not-a-function'],
                 expect: { reject: /expected 'not-a-function' to be a function/i },
             }));
             describe('when called with a value that is a function', () => SUT(SUT, 'isFunction').behaviors([
                 {
-                    title: 'and no arity parameter',
+                    title: 'and no arity parameter or options',
                     args: [a => a],
                     expect: {},
                 },
@@ -77,7 +76,7 @@ describe('lib/claim', () => {
                 describe('and factory returns value synchronously', () => {
                     SUT({
                         SUT: (options, ioc) => ({ ...options, ...ioc }),
-                    })
+                    }, 'SUT')
                         .behavior({
                             options: { options: true },
                             ioc: { ioc: true },
@@ -93,9 +92,9 @@ describe('lib/claim', () => {
                 });
 
                 describe('and factory resolves value asynchronously', () => {
-                    SUT({
-                        SUT: (options, ioc) => Promise.resolve({ ...options, ...ioc }),
-                    })
+                    SUT(
+                        (options, ioc) => Promise.resolve({ ...options, ...ioc }),
+                    )
                         .behavior({
                             options: { options: true },
                             ioc: { ioc: true },
@@ -112,8 +111,8 @@ describe('lib/claim', () => {
 
                 describe('and factory throws an expected error', () => {
                     SUT({
-                        SUT: () => { throw new Error('oupsy dazy'); },
-                    })
+                        attr: () => { throw new Error('oupsy dazy'); },
+                    }, 'attr')
                         .behavior({
                             options: { options: true },
                             ioc: { ioc: true },
@@ -126,7 +125,7 @@ describe('lib/claim', () => {
                 describe('and factory reject an expected error', () => {
                     SUT({
                         SUT: () => { throw new Error('oupsy camillia'); },
-                    })
+                    }, 'SUT')
                         .behavior({
                             options: { options: true },
                             ioc: { ioc: true },
@@ -147,9 +146,9 @@ describe('lib/claim', () => {
                             ctx.handler = f;
                         };
                         try {
-                            SUT({
-                                SUT: () => { throw mockErr; },
-                            }).behavior({
+                            SUT(
+                                () => { throw mockErr; },
+                            ).behavior({
                                 options: { options: true },
                                 ioc: { ioc: true },
                                 expect: {},
