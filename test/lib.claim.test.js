@@ -14,6 +14,9 @@ describe('lib/claim', () => {
                 behaviors: 3,
                 behavior: 2,
             });
+
+            //TRICKY: I use here 3 forms of .hasProps, both as as self-test
+            //  and as example
             SUT.hasProps(SUT, ['version']);
             SUT.hasProps(SUT, { version: 'string' });
             SUT.hasProps(SUT, { version: String });
@@ -167,6 +170,59 @@ describe('lib/claim', () => {
 
                     it('should throw the error back during the `sould not fail` assertion', () => {
                         Should(ctx.err).equal(mockErr);
+                    });
+                });
+
+                describe('and case descriptor includes before/after hooks', () => {
+                    const ctx = {};
+                    const ooo = []; //ooo = order of operations
+                    before(() => {
+                        const { it, before, after } = global;
+                        const handlers = [];
+
+                        global.before = f => f();
+                        global.it = (ttl, f) => handlers.push(f);
+                        global.after = f => handlers.push(f);
+
+                        try {
+                            SUT(
+                                () => { ooo.push('sut') },
+                            ).behavior({
+                                options: { options: true },
+                                ioc: { ioc: true },
+                                before: () => ooo.push('before'),
+                                expect: {
+                                    result: {
+                                        foo: () => ooo.push('result'),
+                                    },
+                                },
+                                after: () => ooo.push('after'),
+                            });
+                        } finally {
+                            global.before = before;
+                            global.it = it;
+                            global.after = after;
+                        }
+
+                        try {
+                            //before called by the SUT.behavior
+                            handlers.forEach(f => f());
+                        } catch (err) {
+                            ctx.err = err;
+                        }
+                    });
+
+                    it('should not fail', () => {
+                        if (ctx.err) throw ctx.err;
+                    });
+
+                    it('should fire before and after hooks', () => {
+                        Should(ooo).eql([
+                            'before',
+                            'sut',
+                            'result',
+                            'after',
+                        ]);
                     });
                 });
             });
