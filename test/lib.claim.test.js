@@ -375,6 +375,71 @@ describe('lib/claim', () => {
             });
         });
 
+        describe('.hasProps(SUT, spec)', () => {
+            const origIt = global.it;
+            const val = {
+                boolProp: false,
+                objPropForClassCheck: new Error('this is an Error'),
+                strPropForTypeCheck: 'this is a string prop',
+                strPropForMatchCheck: 'this is a matchable prop',
+            };
+
+            SUT(SUT.hasProps).behaviors([{
+                title: 'when called with value that matches the specs',
+                args: [val, {
+                    boolProp: 'boolean',
+                    objPropForClassCheck: Error,
+                    strPropForTypeCheck: 'string',
+                    strPropForMatchCheck: /matchable/,
+                }],
+            }, {
+                title: 'when called with value that fails regex match',
+                args: [val, {
+                    boolProp: 'boolean',
+                    objPropForClassCheck: Error,
+                    strPropForTypeCheck: 'string',
+                    strPropForMatchCheck: /not-matchable/,
+                }],
+                expect: {
+                    reject: 'to match /not-matchable/',
+                },
+            }, {
+                title: 'when called with value that fails type match',
+                args: [val, {
+                    boolProp: 'boolean',
+                    objPropForClassCheck: Error,
+                    strPropForTypeCheck: 'object',
+                    strPropForMatchCheck: /matchable/,
+                }],
+                expect: {
+                    reject: 'to have type object',
+                },
+            }, {
+                title: 'when called with value that fails class check',
+                args: [val, {
+                    boolProp: 'boolean',
+                    objPropForClassCheck: class TheProvidedClass extends Error {},
+                    strPropForTypeCheck: 'object',
+                    strPropForMatchCheck: /matchable/,
+                }],
+                expect: {
+                    reject: 'to be an instance of TheProvidedClass',
+                },
+            }].map(
+                c => ({ ...c, before: setup, ready: restore }),
+            ));
+
+            function setup(ctx) {
+                global.it = (ttl, f) => {
+                    ctx.ttl = ttl;
+                    f();
+                };
+            }
+            function restore() {
+                global.it = origIt;
+            }
+        });
+
         describe('.behavior({SUT}, spec)', () => {
             describe('when used on an exco-factory function', () => {
                 describe('and factory returns value synchronously', () => {
