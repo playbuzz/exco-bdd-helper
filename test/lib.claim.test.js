@@ -1,3 +1,4 @@
+/* eslint max-lines: 'off' */
 const Should = require('should');
 const SUT = require('../lib/claim');
 const ioc = require('../lib/ioc');
@@ -78,34 +79,33 @@ describe('lib/claim', () => {
         });
 
         describe('.isExcoFactory(SUT, [opts])', () => {
-
             const orig = { ...global };
             const hijack = ctx => {
                 ctx.tests = [];
                 global.describe = (ttl, f) => f();
                 global.it = (ttl, f) => {
-                    ctx.tests.push({ id: ctx.tests.length, ttl, f});
+                    ctx.tests.push({ id: ctx.tests.length, ttl, f });
                 };
             };
-            const restore = ctx => {
-                ['describe', 'it'].forEach(api => global[api] = orig[api]);
+            const restore = () => {
+                ['describe', 'it'].forEach(api => { global[api] = orig[api]; });
             };
             const runSuite = ctx => {
                 ctx.tests.some(test => {
                     try {
                         test.f();
-                    } catch(e) {
+                    } catch (e) {
                         test.err = e;
                         ctx.failed = test;
                         return true;
                     }
                     return false;
                 });
-            }
+            };
             const onReady = ctx => {
                 restore();
                 runSuite(ctx);
-            }
+            };
 
             describe('when called with a non-function value', () => {
                 const ctx = SUT(SUT.isExcoFactory).behavior({
@@ -128,7 +128,7 @@ describe('lib/claim', () => {
             describe('when called with a function with wrong arity without overriding arity option', () => {
                 const ctx = SUT(SUT.isExcoFactory).behavior({
                     before: hijack,
-                    args: [(a,b,c) => {}],
+                    args: [(a, b, c) => ({ a, b, c })],
                     ready: onReady,
                 });
 
@@ -139,10 +139,10 @@ describe('lib/claim', () => {
                 describe('the created suite', () => {
                     it('should fail about the mismatching arity', () => {
                         Should(ctx.failed)
-                        .be.an.Object()
-                        .have.property('id', 0);
+                            .be.an.Object()
+                            .have.property('id', 0);
                         Should(ctx.failed.err)
-                        .have.property('message').match(/have property length of 2 \(got 3\)/);
+                            .have.property('message').match(/have property length of 2 \(got 3\)/);
                     });
                 });
             });
@@ -151,9 +151,9 @@ describe('lib/claim', () => {
                 describe('and arity option is illegal (not between 0 and 2)', () => {
                     const ctx = SUT(SUT.isExcoFactory).behavior({
                         before: hijack,
-                        args: [(a,b,c) => {}, { arity: 3 }],
+                        args: [(a, b, c) => ({ a, b, c }), { arity: 3 }],
                         ready: onReady,
-                        expect: { reject: /arity must be between 0 to 2/}
+                        expect: { reject: /arity must be between 0 to 2/ },
                     });
 
                     it('should not create any tests', () => {
@@ -164,7 +164,7 @@ describe('lib/claim', () => {
                 describe('and arity: 1 with function with matching arity', () => {
                     const ctx = SUT(SUT.isExcoFactory).behavior({
                         before: hijack,
-                        args: [(a) => {}, {arity: 1}],
+                        args: [a => a, { arity: 1 }],
                         ready: onReady,
                     });
 
@@ -182,7 +182,7 @@ describe('lib/claim', () => {
                 describe('and arity: 0 with function with matching arity', () => {
                     const ctx = SUT(SUT.isExcoFactory).behavior({
                         before: hijack,
-                        args: [() => {}, {arity: 0}],
+                        args: [() => 0, { arity: 0 }],
                         ready: onReady,
                     });
 
@@ -293,7 +293,7 @@ describe('lib/claim', () => {
 
                 describe('and provided value has .env map', () => {
                     const factoryWithEnvMap = (a, b) => ({ a, b });
-                    factoryWithEnvMap.env = {}
+                    factoryWithEnvMap.env = {};
 
                     const ctx = SUT(SUT.isExcoFactory).behavior({
                         before: hijack,
@@ -372,7 +372,7 @@ describe('lib/claim', () => {
                         });
                     });
                 });
-            })
+            });
         });
 
         describe('.behavior({SUT}, spec)', () => {
