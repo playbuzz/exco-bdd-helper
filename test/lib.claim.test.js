@@ -544,24 +544,29 @@ describe('lib/claim', () => {
                 SUT(a => a).behavior({}); //i.e should not fail
             });
 
-            describe('when case descriptor includes before/after hooks', () => {
+            describe('when case descriptor includes before/awaiting/ready/after hooks', () => {
                 const ctx = {};
                 const ooo = []; //ooo = order of operations
-                before(() => {
+                before(async () => {
                     const { it, before, after } = global;
                     const handlers = [];
 
-                    global.before = f => f();
+                    global.before = f => { ctx.before = f; };
                     global.it = (ttl, f) => handlers.push(f);
                     global.after = f => handlers.push(f);
 
                     try {
                         SUT(
-                            () => { ooo.push('sut'); },
+                            () => {
+                                ooo.push('sut');
+                                return Promise.resolve();
+                            },
                         ).behavior({
                             options: { options: true },
                             ioc: { ioc: true },
                             before: () => ooo.push('before'),
+                            awaiting: () => ooo.push('awaiting'),
+                            ready: () => ooo.push('ready'),
                             expect: {
                                 result: {
                                     foo: () => ooo.push('result'),
@@ -576,6 +581,7 @@ describe('lib/claim', () => {
                     }
 
                     try {
+                        await ctx.before();
                         //before called by the SUT.behavior
                         handlers.forEach(f => f());
                     } catch (err) {
@@ -591,6 +597,8 @@ describe('lib/claim', () => {
                     Should(ooo).eql([
                         'before',
                         'sut',
+                        'awaiting',
+                        'ready',
                         'result',
                         'after',
                     ]);
