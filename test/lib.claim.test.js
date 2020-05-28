@@ -540,11 +540,11 @@ describe('lib/claim', () => {
                 });
             });
 
-            describe('when used case descriptor does not include .expect section', () => {
+            describe('when used case-descriptor does not include .expect section', () => {
                 SUT(a => a).behavior({}); //i.e should not fail
             });
 
-            describe('when case descriptor includes before/awaiting/ready/after hooks', () => {
+            describe('when case-descriptor includes before/awaiting/ready/after hooks', () => {
                 const ctx = {};
                 const ooo = []; //ooo = order of operations
                 before(async () => {
@@ -602,6 +602,56 @@ describe('lib/claim', () => {
                         'result',
                         'after',
                     ]);
+                });
+            });
+
+            describe('when case-descriptor includes expect.result', () => {
+                describe('and expect.result contains a title whose value is a stirng', () => {
+                    const handlers = [];
+                    before(() => {
+                        const { describe, it, before } = global;
+
+                        global.describe = (ttl, f) => f();
+                        global.before = f => f;
+                        global.it = (ttl, f) => handlers.push({ ttl, f: Boolean(f) });
+
+                        try {
+                            SUT(
+                                () => {
+                                    return Promise.resolve();
+                                },
+                            ).behavior({
+                                options: { options: true },
+                                ioc: { ioc: true },
+                                expect: {
+                                    result: {
+                                        'this is a pending test': 'skipped' || (a => a),
+                                        'this is also a pending test': null,
+                                        'this is an active test': a => a,
+                                        'sub section': {
+                                            'this is a nested active test': a => a,
+                                            'this is a nested pending test': 'TBD',
+                                        },
+                                    },
+                                },
+                            });
+                        } finally {
+                            global.describe = describe;
+                            global.before = before;
+                            global.it = it;
+                        }
+                    });
+
+                    it('should load them as pending tests, adding string to title, if any', () => {
+                        Should(handlers).eql([
+                            { f: true, ttl: 'should not fail' },
+                            { f: false, ttl: 'this is a pending test >> skipped' },
+                            { f: false, ttl: 'this is also a pending test' },
+                            { f: true, ttl: 'this is an active test' },
+                            { f: true, ttl: 'this is a nested active test' },
+                            { f: false, ttl: 'this is a nested pending test >> TBD' },
+                        ]);
+                    });
                 });
             });
         });

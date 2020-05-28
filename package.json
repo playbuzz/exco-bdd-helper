@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/playbuzz/exco-bdd-helper#readme",
   "dependencies": {
+    "lodash": "*",
     "should": "^13.2.3",
     "sinon": "^9.0.2"
   },
