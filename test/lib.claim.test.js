@@ -1,4 +1,5 @@
 /* eslint max-lines: 'off' */
+const { inspect } = require('util');
 const Should = require('should');
 const SUT = require('../lib/claim');
 const ioc = require('../lib/ioc');
@@ -314,7 +315,7 @@ describe('lib/claim', () => {
             });
 
             describe('when called with options.mapsEnv: <map> ', () => {
-                describe('and provided value has no .env map', () => {
+                describe('and provided value has .env map with only part of the keys', () => {
                     const factoryWithNoEnvMap = (a, b) => ({ a, b });
                     factoryWithNoEnvMap.env = { prop1: 'ENV_PARAM1' };
 
@@ -379,55 +380,105 @@ describe('lib/claim', () => {
             const origIt = global.it;
             const val = {
                 boolProp: false,
-                objPropForClassCheck: new Error('this is an Error'),
+                objPropForClassCheck: Object.assign(
+                    new Error('this is an Error'),
+                    { [inspect.custom]: () => '[Error] { ... }' },
+                ),
                 strPropForTypeCheck: 'this is a string prop',
                 strPropForMatchCheck: 'this is a matchable prop',
+                nested: {
+                    doubleNested: {
+                        str: 'str',
+                    },
+                },
             };
+            const suiteFor = SUT(SUT.hasProps);
 
-            SUT(SUT.hasProps).behaviors([{
-                title: 'when called with value that matches the specs',
+            describe('when called with value that matches the specs', () => suiteFor.behavior({
+                before: setup,
+                ready: restore,
                 args: [val, {
                     boolProp: 'boolean',
                     objPropForClassCheck: Error,
                     strPropForTypeCheck: 'string',
                     strPropForMatchCheck: /matchable/,
                 }],
-            }, {
-                title: 'when called with value that fails regex match',
+            }));
+
+            describe('when called with value that fails regex match', () => suiteFor.behavior({
+                before: setup,
+                ready: restore,
                 args: [val, {
                     boolProp: 'boolean',
                     objPropForClassCheck: Error,
                     strPropForTypeCheck: 'string',
                     strPropForMatchCheck: /not-matchable/,
                 }],
-                expect: {
-                    reject: 'to match /not-matchable/',
-                },
-            }, {
-                title: 'when called with value that fails type match',
+                expect: rejection('to match /not-matchable/'),
+            }));
+
+            describe('when called with value that fails type match', () => suiteFor.behavior({
+                before: setup,
+                ready: restore,
                 args: [val, {
                     boolProp: 'boolean',
                     objPropForClassCheck: Error,
                     strPropForTypeCheck: 'object',
                     strPropForMatchCheck: /matchable/,
                 }],
-                expect: {
-                    reject: 'to have type object',
-                },
-            }, {
-                title: 'when called with value that fails class check',
+                expect: rejection('to have type object'),
+            }));
+
+            describe('when called with value that fails class check', () => suiteFor.behavior({
+                before: setup,
+                ready: restore,
                 args: [val, {
                     boolProp: 'boolean',
                     objPropForClassCheck: class TheProvidedClass extends Error {},
                     strPropForTypeCheck: 'object',
                     strPropForMatchCheck: /matchable/,
                 }],
-                expect: {
-                    reject: 'to be an instance of TheProvidedClass',
-                },
-            }].map(
-                c => ({ ...c, before: setup, ready: restore }),
-            ));
+                expect: rejection('to be an instance of TheProvidedClass'),
+            }));
+
+            describe('when called with value that fails eql check', () => suiteFor.behavior({
+                before: setup,
+                ready: restore,
+                args: [val, {
+                    boolProp: true,
+                    objPropForClassCheck: class TheProvidedClass extends Error {},
+                    strPropForTypeCheck: 'object',
+                    strPropForMatchCheck: /matchable/,
+                }],
+                expect: rejection('expected false to equal true'),
+            }));
+
+            describe('when called with a nested props descriptor and a value that passes', () => suiteFor.behavior({
+                before: setup,
+                ready: restore,
+                args: [val, {
+                    nested: {
+                        doubleNested: {
+                            str: /str/,
+                        },
+                    },
+                }],
+            }));
+
+            describe('when called with a nested props descriptor and a value that fails on nested prop', () => {
+                suiteFor.behavior({
+                    before: setup,
+                    ready: restore,
+                    args: [val, {
+                        nested: {
+                            doubleNested: {
+                                str: /oups/,
+                            },
+                        },
+                    }],
+                    expect: rejection('expected \'str\' to match /oups/'),
+                });
+            });
 
             function setup(ctx) {
                 global.it = (ttl, f) => {
@@ -435,8 +486,22 @@ describe('lib/claim', () => {
                     f();
                 };
             }
+
             function restore() {
                 global.it = origIt;
+            }
+
+            function rejection(reject) {
+                return {
+                    reject: true,
+                    result: {
+                        'should fail on the failed attribute with matching descriptive message': result => {
+                            Should(result).be.an.Error()
+                                .have.property('message')
+                                .containEql(reject);
+                        },
+                    },
+                };
             }
         });
 
