@@ -41,9 +41,9 @@
     "extends": "@playbuzz/eslint-config"
   },
   "pre-push": [
+    "lint",
     "test",
-    "cover",
-    "lint"
+    "cover"
   ],
   "scripts": {
     "test": "mocha",

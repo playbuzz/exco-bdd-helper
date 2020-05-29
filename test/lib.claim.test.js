@@ -1,4 +1,4 @@
-/* eslint max-lines: 'off' */
+/* eslint max-lines: 'off', class-methods-use-this: 'off' */
 const { inspect } = require('util');
 const Should = require('should');
 const SUT = require('../lib/claim');
@@ -378,17 +378,21 @@ describe('lib/claim', () => {
 
         describe('.hasProps(SUT, spec)', () => {
             const origIt = global.it;
+            class MyErr extends Error {
+                [inspect.custom]() { return '[Error] { ... }'; }
+                toJSON() { return { name: 'The-Mock-Error ' }; }
+            }
             const val = {
                 boolProp: false,
-                objPropForClassCheck: Object.assign(
-                    new Error('this is an Error'),
-                    { [inspect.custom]: () => '[Error] { ... }' },
-                ),
+                objPropForClassCheck: new MyErr('this is an Error'),
                 strPropForTypeCheck: 'this is a string prop',
                 strPropForMatchCheck: 'this is a matchable prop',
                 nested: {
                     doubleNested: {
                         str: 'str',
+                        renested: {
+                            str: 'yes!',
+                        },
                     },
                 },
             };
@@ -399,7 +403,7 @@ describe('lib/claim', () => {
                 ready: restore,
                 args: [val, {
                     boolProp: 'boolean',
-                    objPropForClassCheck: Error,
+                    objPropForClassCheck: MyErr,
                     strPropForTypeCheck: 'string',
                     strPropForMatchCheck: /matchable/,
                 }],
@@ -410,7 +414,7 @@ describe('lib/claim', () => {
                 ready: restore,
                 args: [val, {
                     boolProp: 'boolean',
-                    objPropForClassCheck: Error,
+                    objPropForClassCheck: MyErr,
                     strPropForTypeCheck: 'string',
                     strPropForMatchCheck: /not-matchable/,
                 }],
@@ -422,7 +426,7 @@ describe('lib/claim', () => {
                 ready: restore,
                 args: [val, {
                     boolProp: 'boolean',
-                    objPropForClassCheck: Error,
+                    objPropForClassCheck: MyErr,
                     strPropForTypeCheck: 'object',
                     strPropForMatchCheck: /matchable/,
                 }],
@@ -480,6 +484,53 @@ describe('lib/claim', () => {
                 });
             });
 
+            describe('when called with a prop-specifier and a nested props descriptor', () => {
+                describe('and a value that passes', () => {
+                    SUT(SUT.hasProps).behavior({
+                        before: setup,
+                        ready: restore,
+                        args: [val, {
+                            doubleNested: {
+                                renested: {
+                                    str: /yes!/,
+                                },
+                            },
+                        }, { prop: 'nested' }],
+                    });
+                });
+
+                describe('and a value fails on a deeply nested attr', () => {
+                    SUT(SUT.hasProps).behavior({
+                        before: setup,
+                        ready: restore,
+                        args: [val, {
+                            doubleNested: {
+                                renested: {
+                                    str: /nope/,
+                                },
+                            },
+                        }, { prop: 'nested' }],
+                        expect: rejection('expected \'yes!\' to match /nope/'),
+                    });
+                });
+
+                describe('and a value is missing entirely', () => {
+                    SUT(SUT.hasProps).behavior({
+                        before: setup,
+                        ready: restore,
+                        args: [{ the: 'wrong object' }, {
+                            doubleNested: {
+                                renested: {
+                                    str: /nope/,
+                                },
+                            },
+                        }, { prop: 'noSuchProp' }],
+                        expect: rejection(/expected .* to have property .noSuchProp/),
+                    });
+                });
+            });
+
+
             function setup(ctx) {
                 global.it = (ttl, f) => {
                     ctx.ttl = ttl;
@@ -497,8 +548,7 @@ describe('lib/claim', () => {
                     result: {
                         'should fail on the failed attribute with matching descriptive message': result => {
                             Should(result).be.an.Error()
-                                .have.property('message')
-                                .containEql(reject);
+                                .have.property('message')[reject instanceof RegExp ? 'match' : 'containEql'](reject);
                         },
                     },
                 };
