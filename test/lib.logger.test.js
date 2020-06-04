@@ -125,7 +125,24 @@ describe('lib/logger', () => {
                             Should(entries.msgInclude('o').length).eql(6);
                         });
                     });
+                    describe('.log(console)', () => {
+                        it('uses the console to print itself, described', () => {
+                            const con = console; //eslint-disable-line no-console
+                            const origLog = con.log;
+                            const mockLog = a => { mockLog.calledWith = a; };
 
+                            con.log = mockLog;
+                            try {
+                                entries.log();
+                            } finally {
+                                con.log = origLog;
+                            }
+
+                            Should(mockLog.calledWith)
+                                .be.ok()
+                                .be.a.String();
+                        });
+                    });
                     describe('and', () => {
                         it('filter apis can be chained', () => {
                             const { length: found } = entries
